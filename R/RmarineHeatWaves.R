@@ -1,7 +1,7 @@
 #' Detect Marine Heat Waves and Marine Cold Spells.
 #'
-#'Applies the Hobday et al. (2016) marine heat wave definition to an input time
-#'series of temperature along with a time vector.
+#' Applies the Hobday et al. (2016) marine heat wave definition to an input time
+#' series of temperature along with a daily date vector.
 #'
 #' @importFrom magrittr %>%
 #' @importFrom plyr .
@@ -61,33 +61,32 @@
 #' specified in order to capture decadal thermal periodicities. Currently the
 #' function will only compute climatologies starting from 1 January of the
 #' specified \code{climatology_start} and ending on 31 December of the specified
-#' \code{climatology_end}. Even one day short of a full (i.e. 365 day during
+#' \code{climatology_end}. Even one day short of a full year (i.e. 365 day during
 #' non-leap years and 366 days during leap years) at the beginning/end of the
 #' climatology period will cause the function to fail. This may be changed in
 #' future versions of the function.
 #' \item This function supports leap years. This is done by ignoring Feb 29s
-#' for the initial calculation of the climatology and threshold. The value of
-#' these for Feb 29 is then linearly interpolated from the values for Feb 28
-#' and Mar 1.
-#' \item The calculation of onset and decline rates assumes that the heat wave
+#' for the initial calculation of the climatology and threshold. The values for
+#' Feb 29 are then linearly interpolated from the values for Feb 28 and Mar 1.
+#' \item The calculation of onset and decline rates assumes that the events
 #' started a half-day before the start day and ended a half-day after the
-#' end-day. (This is consistent with the duration definition as implemented,
-#' which assumes duration = end day - start day + 1.)
-#' \item For the purposes of MHW detection, any missing temp values not
-#' interpolated over (through optional \code{maxPadLLength}) will be set equal
+#' end-day. This is consistent with the duration definition as implemented,
+#' which assumes duration = end day - start day + 1.
+#' \item For the purposes of event detection, any missing temperature values not
+#' interpolated over (through optional \code{max_pad_length}) will be set equal
 #' to the seasonal climatology. This means they will trigger the end/start of
-#' any adjacent temp values which satisfy the MHW criteria.
+#' any adjacent temperature values which satisfy the event definition criteria.
 #' \item If the code is used to detect cold events (\code{coldSpells} = TRUE),
 #' then it works just as for heat waves except that events are detected as
 #' deviations below the (100 - pctile)th percentile  (e.g., the 10th instead of
 #' 90th) for at least 5 days. Intensities are reported as negative values and
 #' represent the temperature anomaly below climatology.
 #' }
-#' The original python algorithm was written by Eric Oliver, Institue for
+#' The original Python algorithm was written by Eric Oliver, Institute for
 #' Marine and Antarctic Studies, University of Tasmania, Feb 2015, and is
 #' documented by Hobday et al. (2016). The marine cold spell option was
-#' implemented in version 0.13 (21 Nov 2015) of the python module as a result
-#' of our the preparation of Schlegel et al. (submitted), wherein the cold events
+#' implemented in version 0.13 (21 Nov 2015) of the Python module as a result
+#' of our preparation of Schlegel et al. (submitted), wherein the cold events
 #' receive a brief overview.
 #'
 #' @return The function will return a list of two components, \code{clim} and
@@ -144,11 +143,11 @@
 #'
 #' @author Albertus J. Smit, Robert W. Schlegel, Eric C. J. Oliver
 #'
-#' @references Hobday, A.J. et al. (2016), A hierarchical approach to defining
+#' @references Hobday, A.J. et al. (2016). A hierarchical approach to defining
 #' marine heatwaves, Progress in Oceanography, 141, pp. 227-238,
-#' doi: 10.1016/j.pocean.2015.12.014
+#' doi:10.1016/j.pocean.2015.12.014
 #'
-#' Schlegel, R. W., Oliver, C. J., Wernberg, T. W., Smit, A. J. (submitted)
+#' Schlegel, R. W., Oliver, C. J., Wernberg, T. W., Smit, A. J. (submitted).
 #' Coastal and offshore co-occurrences of marine heatwaves and cold-spells.
 #' Progress in Oceanography.
 #'
@@ -174,40 +173,40 @@ detect <-
            max_gap = 2,
            max_pad_length = 3,
            cold_spells = FALSE) {
-
+    
     t_series <- data
     t_series$temp <- zoo::na.approx(t_series$temp, maxgap = max_pad_length)
-
+    
     if (missing(climatology_start))
       stop("Oops! Please provide a complete year for the start of the climatology.")
-
+    
     if (missing(climatology_end))
       stop("Bummer! Please provide a complete year for the end of the climatology.")
-
+    
     clim_start <- paste(climatology_start, "01", "01", sep = "-")
     if (t_series$date[1] > clim_start) {
       stop(paste("The specified start date precedes the first day of series, which is", t_series$date[1]))
     }
-
+    
     clim_end <- paste(climatology_end, "12", "31", sep = "-")
     if (clim_end > t_series$date[nrow(t_series)])
       stop(paste("The specified end date follows the last day of series, which is", t_series$date[nrow(t_series)]))
-
+    
     if (cold_spells)
       t_series$temp <- -t_series$temp
-
+    
     tDat <- t_series %>%
       dplyr::filter(date >= clim_start & date <= clim_end) %>%
       dplyr::mutate(date = lubridate::year(date)) %>%
       tidyr::spread(date, temp)
-
+    
     all_NA <- apply(tDat[59:61, ], 2, function(x) !all(is.na(x)))
     no_NA <- names(all_NA[all_NA > 0]) # compatibility with zoo < 1.7.13...
     tDat[59:61, no_NA] <- zoo::na.approx(tDat[59:61, no_NA], maxgap = 1, na.rm = TRUE)
     tDat <- rbind(utils::tail(tDat, window_half_width),
                   tDat, utils::head(tDat, window_half_width))
     seas_clim_year <- thresh_clim_year <- rep(NA, nrow(tDat))
-
+    
     for (i in (window_half_width + 1):((nrow(tDat) - window_half_width))) {
       seas_clim_year[i] <-
         mean(c(t(tDat[(i - (window_half_width)):(i + window_half_width), 2:ncol(tDat)])), na.rm = TRUE)
@@ -220,7 +219,7 @@ detect <-
           names = FALSE
         )
     }
-
+    
     len_clim_year <- 366
     clim <-
       data.frame(
@@ -228,7 +227,7 @@ detect <-
         seas_clim_year = seas_clim_year[(window_half_width + 1):((window_half_width) + len_clim_year)],
         thresh_clim_year = thresh_clim_year[(window_half_width + 1):((window_half_width) + len_clim_year)]
       )
-
+    
     if (smooth_percentile) {
       clim %<>%
         dplyr::mutate(
@@ -252,10 +251,10 @@ detect <-
           )
         )
     }
-
+    
     t_series %<>% dplyr::inner_join(clim, by = "doy")
     t_series$temp[is.na(t_series$temp)] <- t_series$seas_clim_year[is.na(t_series$temp)]
-
+    
     t_series$thresh_criterion <- t_series$temp > t_series$thresh_clim_year
     ex1 <- rle(t_series$thresh_criterion)
     ind1 <- rep(seq_along(ex1$lengths), ex1$lengths)
@@ -265,9 +264,9 @@ detect <-
     proto_events_rng <-
       lapply(proto_events, function(x)
         data.frame(index_start = min(x), index_stop = max(x)))
-
+    
     duration <- NULL ###
-
+    
     protoFunc <- function(proto_data) {
       out <- proto_data %>%
         dplyr::mutate(duration = index_stop - index_start + 1) %>%
@@ -275,38 +274,38 @@ detect <-
         dplyr::mutate(date_start = t_series[index_start, "date"]) %>%
         dplyr::mutate(date_stop = t_series[index_stop, "date"])
     }
-
+    
     proto_events <- do.call(rbind, proto_events_rng) %>%
       dplyr::mutate(event_no = cumsum(ex1$values[ex1$values == TRUE])) %>%
       protoFunc()
-
+    
     t_series$duration_criterion <- rep(FALSE, nrow(t_series))
-
+    
     for (i in 1:nrow(proto_events)) {
       t_series$duration_criterion[proto_events$index_start[i]:proto_events$index_stop[i]] <-
         rep(TRUE, length = proto_events$duration[i])
     }
-
+    
     ex2 <- rle(t_series$duration_criterion)
     ind2 <- rep(seq_along(ex2$lengths), ex2$lengths)
     s2 <- split(zoo::index(t_series$thresh_criterion), ind2)
     proto_gaps <- s2[ex2$values == FALSE]
     proto_gaps_rng <-
       lapply(proto_gaps, function(x) data.frame(index_start = min(x), index_stop = max(x)))
-
+    
     proto_gaps <- do.call(rbind, proto_gaps_rng) %>%
       dplyr::mutate(event_no = c(1:length(ex2$values[ex2$values == FALSE]))) %>%
       dplyr::mutate(duration = index_stop - index_start + 1)
-
+    
     if (any(proto_gaps$duration >= 1 & proto_gaps$duration <= max_gap)) {
-    proto_gaps %<>%
+      proto_gaps %<>%
         dplyr::mutate(date_start = t_series[index_start, "date"]) %>%
         dplyr::mutate(date_stop = t_series[index_stop, "date"]) %>%
         dplyr::filter(duration >= 1 & duration <= max_gap)
     } else {
-        join_across_gaps <- FALSE
-      }
-
+      join_across_gaps <- FALSE
+    }
+    
     if (join_across_gaps) {
       t_series$event <- t_series$duration_criterion
       for (i in 1:nrow(proto_gaps)) {
@@ -315,8 +314,8 @@ detect <-
       }
     } else {
       t_series$event <- t_series$duration_criterion
-      }
-
+    }
+    
     ex3 <- rle(t_series$event)
     ind3 <- rep(seq_along(ex3$lengths), ex3$lengths)
     s3 <- split(zoo::index(t_series$event), ind3)
@@ -325,17 +324,17 @@ detect <-
     events_rng <-
       lapply(events, function(x)
         data.frame(index_start = min(x), index_stop = max(x)))
-
+    
     events <- do.call(rbind, events_rng) %>%
       dplyr::mutate(event_no = cumsum(ex3$values[ex3$values == TRUE])) %>%
       protoFunc()
-
+    
     t_series$event_no <- rep(NA, nrow(t_series))
     for (i in 1:nrow(events)) {
       t_series$event_no[events$index_start[i]:events$index_stop[i]] <-
         rep(i, length = events$duration[i])
     }
-
+    
     events_list <- plyr::dlply(events, .(event_no), function(x)
       with(
         t_series,
@@ -350,7 +349,7 @@ detect <-
             c(thresh_clim_year[x$index_start:x$index_stop]) - c(seas_clim_year[x$index_start:x$index_stop])
         )
       ))
-
+    
     int_mean <- int_max <- int_cum <- int_mean_rel_thresh <-
       int_max_rel_thresh <- int_cum_rel_thresh <- int_mean_abs <-
       int_max_abs <- int_cum_abs <- int_mean_norm <- int_max_norm <-
@@ -386,7 +385,7 @@ detect <-
       plyr::ldply(events_list, function(x) mean(x$rel_thresh_norm))[, 2]
     events$int_max_norm <-
       plyr::ldply(events_list, function(x) max(x$rel_thresh_norm))[, 2]
-
+    
     mhw_rel_seas <- t_series$temp - t_series$seas_clim_year
     A <- mhw_rel_seas[events$index_start]
     B <- t_series$temp[events$index_start - 1]
@@ -413,7 +412,7 @@ detect <-
       )
     }
     events$rate_onset <- rateOnset(events, start_type)
-
+    
     D <- mhw_rel_seas[events$index_stop]
     E <- t_series$temp[events$index_stop + 1]
     F <- t_series$seas_clim_year[events$index_stop + 1]
@@ -428,7 +427,7 @@ detect <-
         "case6"
       )
     )[nrow(events)]
-
+    
     rateDecline <- function(x, type) {
       switch(
         type,
@@ -440,7 +439,7 @@ detect <-
       )
     }
     events$rate_decline <- rateDecline(events, stop_type)
-
+    
     if (cold_spells) {
       events <- events %>% dplyr::mutate(
         int_mean = -int_mean,
@@ -461,7 +460,7 @@ detect <-
         thresh_clim_year = -thresh_clim_year
       )
     }
-
+    
     list(clim = dplyr::group_by(t_series, event_no),
          event = dplyr::group_by(events, event_no))
   }
