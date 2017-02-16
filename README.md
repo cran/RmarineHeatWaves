@@ -1,12 +1,11 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
 RmarineHeatWaves
 ================
 
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/RmarineHeatWaves)](https://cran.r-project.org/package=RmarineHeatWaves) [![Travis-CI Build Status](https://travis-ci.org/ajsmit/RmarineHeatWaves.svg?branch=master)](https://travis-ci.org/ajsmit/RmarineHeatWaves) ![](https://cranlogs.r-pkg.org/badges/grand-total/RmarineHeatWaves)
 
-The RmarineHeatWaves package is a translation of the original Python code written by Eric C. J. Oliver that can be found on [GitHub](https://github.com/ecjoliver/marineHeatWaves).
+The **RmarineHeatWaves** package is a translation of the original Python code written by Eric C. J. Oliver that can be found on [GitHub](https://github.com/ecjoliver/marineHeatWaves).
 
-The RmarineHeatWaves R package contains a number of functions which calculate and display marine heat waves according to the definition of Hobday et al. (2016). The marine cold spell option was implemented in version 0.13 (21 Nov 2015) of the Python module as a result of the preparation of Schlegel et al. (in press), wherein the cold events are introduced and briefly discussed.
+The **RmarineHeatWaves** R package contains a number of functions which calculate and display marine heat waves according to the definition of Hobday et al. (2016). The marine cold spell option was implemented in version 0.13 (21 Nov 2015) of the Python module as a result of the preparation of Schlegel et al. (in press), wherein the cold events are introduced and briefly discussed.
 
 This package may be found on [CRAN](https://cran.r-project.org/package=RmarineHeatWaves). Alternatively, you may install it from GitHub by issuing the following command:
 
@@ -48,8 +47,16 @@ The functions
 <td>Creates a timeline of selected event metrics.</td>
 </tr>
 <tr class="even">
-<td><code>exceedence()</code></td>
+<td><code>exceedance()</code></td>
 <td>A function similar to <code>detect()</code> but that detects consecutive days above/ below a given threshold.</td>
+</tr>
+<tr class="odd">
+<td><code>geom_flame()</code></td>
+<td>Creates flame polygons of marine heat waves or cold spells.</td>
+</tr>
+<tr class="even">
+<td><code>geom_lolli()</code></td>
+<td>Creates a lolliplot timeline of selected event metric.</td>
 </tr>
 </tbody>
 </table>
@@ -62,7 +69,7 @@ The detect and graphing functions
 Here is the `detect()` function applied to the Western Australian test data, which are also discussed by Hobday et al. (2016):
 
 ``` r
-library(RmarineHeatWaves); library(dplyr)
+library(RmarineHeatWaves); library(plyr); library(dplyr); library(ggplot2)
 ts <- make_whole(sst_WA)
 mhw <- detect(ts, climatology_start = 1983, climatology_end = 2012)
 mhw$event %>% 
@@ -95,12 +102,66 @@ event_line(mhw, spread = 200, metric = "int_cum",
 ![](README-fig-example1-1.png)
 
 ``` r
+
 lolli_plot(mhw)
 ```
 
 ![](README-fig-example1-2.png)
 
-Marine cold spells are also accommodated. Here is a cold spell detected in the OISST data for Western Australia:
+If one requires more control over the output, one may choose to create these figures in **ggplot2** as 'geoms'. These require only the `clim` dataframe from the `detect()` ouput:
+
+``` r
+mhw2 <- mhw$clim
+mhw2 <- mhw2[10580:10690,]
+
+ggplot(mhw2, aes(x = date, y = temp, y2 = thresh_clim_year)) +
+  geom_flame() +
+  geom_text(aes(x = as.Date("2011-02-01"), y = 28, label = "The MHW that launched\na thousand papers."))
+```
+
+![](README-fig-example2-1.png)
+
+``` r
+
+ggplot(mhw$event, aes(x = date_start, y = int_max)) +
+  geom_lolli(colour = "salmon", colour.n = "red", n = 3) +
+  geom_text(aes(x = as.Date("2006-10-01"), y = 5, 
+                label = "The distribution of events\nis skewed towards the\nend of the time series."), colour = "black")
+```
+
+![](README-fig-example2-2.png)
+
+The default output of these function may not be to your liking. If so, not to worry. As **ggplot2** geoms, they are highly maleable. For example, if one were to choose to reproduce the format of the MHWs as seen in Hobday et al. (2016), the code would look something like this:
+
+``` r
+# It is necessary to give geom_flame() at least one row on either side of the event in order to calculate the ploygon corners smoothly
+mhw_top <- mhw2[49:110,]
+
+ggplot(data = mhw2, aes(x = date)) +
+  geom_flame(aes(y = temp, y2 = thresh_clim_year, fill = "all"), show.legend = T) +
+  geom_flame(data = mhw_top, aes(y = temp, y2 = thresh_clim_year, fill = "top"), show.legend = T) +
+  geom_line(aes(y = temp, colour = "temp")) +
+  geom_line(aes(y = thresh_clim_year, colour = "thresh")) +
+  geom_line(aes(y = seas_clim_year, colour = "seas")) +
+  scale_colour_manual(name = "Line Colour", values = c("temp" = "black", "thresh" =  "forestgreen","seas" = "grey80")) +
+  scale_fill_manual(name = "Event Colour", values = c("all" = "salmon", "top" = "red")) +
+  guides(colour = guide_legend(override.aes = list(fill = NA))) +
+  xlab("Date") + ylab("Temperature [degrees C]")
+```
+
+![](README-fig-example3-1.png)
+
+Conversely, should one not wish to highlight any events with `geom_lolli()`, it would look like this:
+
+``` r
+# Note that this is accomplished by setting 'colour.n = NA', not by setting 'n = 0'.
+ggplot(mhw$event, aes(x = date_start, y = int_cum)) +
+  geom_lolli(colour = "salmon", n = 3, colour.n = NA)
+```
+
+![](README-fig-example4-1.png)
+
+The calculation and visualisation of marine cold spells is also accommodated within this package. Here is a cold spell detected in the OISST data for Western Australia:
 
 ``` r
 mcs <- detect(ts, climatology_start = 1983, climatology_end = 2012, cold_spells = TRUE)
@@ -131,13 +192,42 @@ event_line(mcs, spread = 200, metric = "int_cum",
            start_date = "1990-01-01", end_date = "1990-08-30")
 ```
 
-![](README-fig-example2-1.png)
+![](README-fig-example5-1.png)
 
 ``` r
+
 lolli_plot(mcs)
 ```
 
-![](README-fig-example2-2.png)
+![](README-fig-example5-2.png)
+
+Cold spell figures may be created as geoms in **ggplot2**, too:
+
+``` r
+mcs2 <- mcs$clim
+mcs2 <- mcs2[2990:3190,]
+
+# Note that the plot centres on the polygons, so it may be necessary to manually zoom out a bit
+ggplot(mcs2, aes(x = date, y = thresh_clim_year, y2 = temp)) +
+  geom_flame(fill = "steelblue3") +
+  geom_line(aes(y = temp), colour = "black") +
+  geom_line(aes(y = thresh_clim_year), colour = "forestgreen") +
+  geom_line(aes(y= seas_clim_year), colour = "grey80")
+```
+
+![](README-fig-example6-1.png)
+
+``` r
+  scale_y_continuous(limits = c(18, 23.5))
+#> <ScaleContinuousPosition>
+#>  Range:  
+#>  Limits:   18 -- 23.5
+
+ggplot(mcs$event, aes(x = date_start, y = int_cum)) +
+  geom_lolli(colour = "steelblue3", colour.n = "navy", n = 7)
+```
+
+![](README-fig-example6-2.png)
 
 We can also load the gridded 0.25 degree Reynolds [OISST data](http://www.ncdc.noaa.gov/thredds/oisst-catalog.html) and apply the function pixel by pixel over all of the days of data. The example data used here have 93 longitude steps, 43 latitude steps, and cover 12797 days (1981 to 2016). We apply the `detect()` function to these data, fit a generalised linear model (GLM), and then plot the trend per decade of the marine heatwave count. In other words, have marine heatwaves become more or less frequent in recent years? Under climate change we can expect that extreme events would tend to occur more frequently and be of greater intensity. Indeed, we can clearly see in the figure below of the result of the GLM, how the Agulhas Current has been experiencing marine heat waves more frequently in recent decades. But there are two smaller areas, one along the western side of the Cape Peninsula in the Benguela Upwelling system and another around the Eastern Cape Province near Algoa Bay, where the frequency of marine heat waves seems to have actually been decreasing -- although the P-value of the decreasing trend is &gt; 0.05, and therefore not significant.
 
@@ -145,19 +235,19 @@ We can also load the gridded 0.25 degree Reynolds [OISST data](http://www.ncdc.n
 
 Please read the package [vignette](https://github.com/ajsmit/RmarineHeatWaves/blob/master/vignettes/gridded-event-detection.Rmd) to see how to load a netCDF file with the OISST data, apply the RmarineHeatWaves function to the whole 3D array of data, and then fit the GLM and plot the data.
 
-The exceedence function
+The exceedance function
 -----------------------
 
-In addition to the calculation of extreme events, consecutive days over a given static threshold may be calculated with the `exceedence()` function.
+In addition to the calculation of extreme events, consecutive days over a given static threshold may be calculated with the `exceedance()` function.
 
 ``` r
-exc <- exceedence(ts, threshold = 25)
-exc$exceedence %>% 
+exc <- exceedance(ts, threshold = 25)
+exc$exceedance %>% 
   ungroup() %>%
-  select(exceedence_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
+  select(exceedance_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
   dplyr::arrange(-int_cum)
 #> # A tibble: 11 × 7
-#>    exceedence_no duration date_start  date_peak  int_mean   int_max
+#>    exceedance_no duration date_start  date_peak  int_mean   int_max
 #>            <int>    <dbl>     <date>     <date>     <dbl>     <dbl>
 #> 1              7       52 2011-02-08 2011-02-28 1.6740379 4.7399993
 #> 2              6       25 2008-04-03 2008-04-14 0.9799994 2.1899994
@@ -176,13 +266,13 @@ exc$exceedence %>%
 The same function may be used to calculate consecutive days below a threshold, too.
 
 ``` r
-exc <- exceedence(ts, threshold = 19, below = TRUE)
-exc$exceedence %>% 
+exc <- exceedance(ts, threshold = 19, below = TRUE)
+exc$exceedance %>% 
   ungroup() %>%
-  select(exceedence_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
+  select(exceedance_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
   dplyr::arrange(int_cum)
 #> # A tibble: 22 × 7
-#>    exceedence_no duration date_start  date_peak   int_mean    int_max
+#>    exceedance_no duration date_start  date_peak   int_mean    int_max
 #>            <int>    <dbl>     <date>     <date>      <dbl>      <dbl>
 #> 1             17       46 2003-09-06 2003-09-16 -0.6008700 -1.3400004
 #> 2             16       31 2002-09-08 2002-09-25 -0.8480649 -1.8800004
