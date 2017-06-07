@@ -1,4 +1,4 @@
-#' Create 'Flame' Ploygons
+#' Create 'Flame' Ploygons.
 #'
 #' This function will create polygons between two lines. If given a
 #' temperature and theshold time series, like that produced by \code{\link{detect}},
@@ -6,9 +6,9 @@
 #' 'flame polygons'. If one wishes to plot polygons below a given threshold, and not
 #' above, switch the values being fed to the \code{y} and \code{y2}
 #' aesthetics. This function differs in use from \code{\link{event_line}}
-#' in that it must be created as a \code{ggplot()} 'geom' object. The benefit
+#' in that it must be created as a \code{ggplot} 'geom' object. The benefit
 #' of this being that one may add additional information to the figure as geom
-#' layers as may be necessary.
+#' layers to ggplot2 graphs as may be necessary.
 #'
 #' @import ggplot2
 #' @importFrom ggplot2 ggproto
@@ -120,8 +120,8 @@ GeomFlame <- ggplot2::ggproto("GeomFlame", ggplot2::Geom,
                                 y.points <- x1[intersect.points] + (x1.slopes * (x.points - intersect.points))
 
                                 # Coerece x.points to the same scale as x
-                                x_gap <- data$x[2]-data$x[1]
-                                x.points <- data$x[intersect.points]+(x_gap*(x.points-intersect.points))
+                                x_gap <- data$x[2] - data$x[1]
+                                x.points <- data$x[intersect.points] + (x_gap*(x.points - intersect.points))
 
                                 # Create new data frame and merge to introduce new rows of data
                                 data2 <- data.frame(y = c(data$y, y.points), x = c(data$x, x.points))

@@ -6,18 +6,19 @@
 \usage{
 detect(data, climatology_start = 1983, climatology_end = 2012,
   pctile = 90, window_half_width = 5, smooth_percentile = TRUE,
-  smooth_percentile_width = 31, min_duration = 5, join_across_gaps = TRUE,
-  max_gap = 2, max_pad_length = 3, cold_spells = FALSE)
+  smooth_percentile_width = 31, clim_only = FALSE, min_duration = 5,
+  join_across_gaps = TRUE, max_gap = 2, max_pad_length = 3,
+  cold_spells = FALSE)
 }
 \arguments{
 \item{data}{A data frame with three columns. They are headed \code{doy},
-which is the Julian day running from 1 to 366, but modified so that the
-day-of-year (doy) vector for non-leap-years runs 1...59 and then
-61...366. For leap years the 60th day is February 29. The \code{date} column
-is a vector of dates of class \code{Date}, while \code{temp} is the
-temperature. Data of the appropriate format are created by the function
-\code{\link{make_whole}}, but your own data can be supplied if they meet the
-criteria specified by \code{\link{make_whole}}.}
+\code{date} and \code{temp.} \code{doy} is the Julian day running from 1
+to 366, but modified so that the day-of-year (doy) vector for non-leap-years
+runs 1...59 and then 61...366. For leap years the 60th day is February 29.
+The \code{date} column is a vector of dates of class \code{Date}, while
+\code{temp} is the temperature. Data of the appropriate format are created
+by the function \code{\link{make_whole}}, but your own data can be supplied
+if they meet the criteria specified by \code{\link{make_whole}}.}
 
 \item{climatology_start}{The first full year from which the (varying by
 day-of-year) seasonal cycle and extremes threshold are calculated (full being
@@ -44,6 +45,9 @@ climatology and threshold. Default is \code{31} days.}
 \item{smooth_percentile_width}{Boolean switch selecting whether to smooth the
 climatology and threshold percentile timeseries with a moving average of
 width \code{smooth_percentile}. Default is \code{TRUE}.}
+
+\item{clim_only}{Choose to calculate only the climatologies and not the
+events. Default is \code{FALSE}.}
 
 \item{min_duration}{Minimum duration for acceptance of detected MHWs.
 Default is \code{5} days.}
@@ -77,11 +81,12 @@ events that were detected:
   \item{seas_clim_year}{Climatological seasonal cycle [deg. C].}
   \item{thresh_clim_year}{Seasonally varying threshold (e.g., 90th
   percentile) [deg. C].}
+  \item{var_clim_year}{Seasonally varying variance (standard deviation) [deg. C].}
   \item{thresh_criterion}{Boolean indicating if \code{temp} exceeds
   \code{thresh_clim_year}.}
   \item{duration_criterion}{Boolean indicating whether periods of consecutive
   \code{thresh_criterion} are >= \code{min_duration}.}
-  \item{event}{Boolean indicting if all criteria that define a MHW or MCS are
+  \item{event}{Boolean indicating if all criteria that define a MHW or MCS are
   met.}
   \item{event_no}{A sequential number indicating the ID and order of
   occurence of the MHWs or MCSs.}
@@ -161,6 +166,8 @@ then it works just as for heat waves except that events are detected as
 deviations below the (100 - pctile)th percentile  (e.g., the 10th instead of
 90th) for at least 5 days. Intensities are reported as negative values and
 represent the temperature anomaly below climatology.
+\item If only the climatology for the time series is required, and not the
+events themselves, this may be done by setting \code{clim_only} = TRUE.
 }
 The original Python algorithm was written by Eric Oliver, Institute for
 Marine and Antarctic Studies, University of Tasmania, Feb 2015, and is
