@@ -1,6 +1,6 @@
 Package: RmarineHeatWaves
-Version: 0.15.6
-Date: 2017-06-06
+Version: 0.15.7
+Date: 2017-06-18
 Title: Detect Marine Heat Waves and Marine Cold Spells
 Type: Package
 Authors@R: c(person("Albertus J.", "Smit", role = c("aut", "cre"),
@@ -24,9 +24,9 @@ URL: https://github.com/ajsmit/RmarineHeatWaves
 LazyData: TRUE
 RoxygenNote: 6.0.1
 NeedsCompilation: no
-Packaged: 2017-06-07 06:06:15 UTC; ajsmit
+Packaged: 2017-06-18 07:33:26 UTC; ajsmit
 Author: Albertus J. Smit [aut, cre] (R implementation.),
   Eric C. J. Oliver [aut] (The brain behind the Python implementation.),
   Robert W. Schlegel [ctb] (Graphical and data summaries.)
 Repository: CRAN
-Date/Publication: 2017-06-07 17:31:18 UTC
+Date/Publication: 2017-06-18 12:57:31 UTC

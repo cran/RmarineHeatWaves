@@ -22,8 +22,8 @@
 #' and extremes threshold are calculated. Default is \code{2012} (but see comment
 #' above).
 #' @param pctile Threshold percentile (\%) for detection of extreme values.
-#' Default is \code{90}th percentile for marine heat waves and \code{10}th
-#' percentile for marine cold spells.
+#' Default is \code{90}th percentile. Please see \code{cold_spells} for more
+#' information about the calculation of marine cold spells.
 #' @param window_half_width Width of sliding window about day-of-year (to one
 #' side of the center day-of-year) used for the pooling of values and
 #' calculation of climatology and threshold percentile. Default is \code{5}
@@ -49,7 +49,15 @@
 #' greater than \code{max_pad_length} will be left as \code{NA}. Set as an
 #' integer. Default is \code{3} days.
 #' @param cold_spells Boolean specifying if the code should detect cold events
-#' instead of heat events. Default is \code{FALSE}.
+#' instead of heat events. Default is \code{FALSE}. Please note that the
+#' climatological thresholds for cold-spells are calculated the same as for
+#' heatwaves, meaning that \code{pctile} should be set the same regardless
+#' if one is calculating heatwaves or cold-spells. For example, if one wants
+#' to calculate heatwaves above the 90th percentile threshold
+#' (the default) one sets \code{pctile} = 90. Likewise, if one would like
+#' identify the most intense cold-spells one must also set \code{pctile} = 90,
+#' even though cold spells are in fact simply the coldest extreme events in a
+#' time series, which statistically equate to values below the 10th percentile.
 #'
 #' @details
 #' \enumerate{
@@ -74,7 +82,12 @@
 #' \item The calculation of onset and decline rates assumes that the events
 #' started a half-day before the start day and ended a half-day after the
 #' end-day. This is consistent with the duration definition as implemented,
-#' which assumes duration = end day - start day + 1.
+#' which assumes duration = end day - start day + 1. As of version 0.15.7, an
+#' event that is already present at the beginning of a time series, or an event
+#' that is still present at the end of a time series, will report the rate of
+#' onset or the rate of decline as \code{NA}, as it is impossible to know what
+#' the temperature half a day before or after the start or end of the event is.
+#' This may be a departure from the python marineHeatWaves function.
 #' \item For the purposes of event detection, any missing temperature values not
 #' interpolated over (through optional \code{max_pad_length}) will be set equal
 #' to the seasonal climatology. This means they will trigger the end/start of
@@ -147,8 +160,8 @@
 #' value of the threshold (relative to climatology,
 #' i.e., threshold - climatology.)
 #'
-#' Note that \code{rate_onset} and \code{rate_decline} will return NA or
-#' NaN when the event occurs at the start or end of time series. This
+#' Note that \code{rate_onset} and \code{rate_decline} will return NA
+#' when the event begins/ ends on the first/ last day of the time series. This
 #' may be particularly evident when the function is applied to large gridded
 #' data sets. Although the other metrics do not contain any errors and
 #' provide sensible values, please take this into account in its
@@ -160,9 +173,9 @@
 #' marine heatwaves, Progress in Oceanography, 141, pp. 227-238,
 #' doi:10.1016/j.pocean.2015.12.014
 #'
-#' Schlegel, R. W., Oliver, C. J., Wernberg, T. W., Smit, A. J. (in press).
+#' Schlegel, R. W., Oliver, C. J., Wernberg, T. W., Smit, A. J. (2017).
 #' Coastal and offshore co-occurrences of marine heatwaves and cold-spells.
-#' Progress in Oceanography.
+#' Progress in Oceanography, 151, pp. 189-205, doi:10.1016/j.pocean.2017.01.004
 #'
 #' @export
 #'
@@ -292,6 +305,7 @@ detect <-
       t_series <- merge(data, clim, by = "doy")
       t_series <- t_series[order(t_series$date),]
       return(t_series)
+
     } else {
       t_series %<>% dplyr::inner_join(clim, by = "doy")
       t_series$temp[is.na(t_series$temp)] <- t_series$seas_clim_year[is.na(t_series$temp)]
@@ -375,7 +389,7 @@ detect <-
           rep(i, length = events$duration[i])
       }
 
-      events_list <- plyr::dlply(events, .(event_no), function(x)
+      events_list <- plyr::dlply(events, c("event_no"), function(x)
         with(
           t_series,
           data.frame(
@@ -388,12 +402,13 @@ detect <-
             rel_thresh_norm = c(temp[x$index_start:x$index_stop]) - c(thresh_clim_year[x$index_start:x$index_stop]) /
               c(thresh_clim_year[x$index_start:x$index_stop]) - c(seas_clim_year[x$index_start:x$index_stop])
           )
-        ))
+        )
+      )
 
       int_mean <- int_max <- int_cum <- int_mean_rel_thresh <-
         int_max_rel_thresh <- int_cum_rel_thresh <- int_mean_abs <-
         int_max_abs <- int_cum_abs <- int_mean_norm <- int_max_norm <-
-        temp <- doy <- NULL ###
+        temp <- doy <- rate_onset <- rate_decline <- NULL ###
       events$date_peak <-
         plyr::ldply(events_list, function(x)
           x$date[x$mhw_rel_seas == max(x$mhw_rel_seas)][1])[, 2]
@@ -430,55 +445,30 @@ detect <-
       A <- mhw_rel_seas[events$index_start]
       B <- t_series$temp[events$index_start - 1]
       C <- t_series$seas_clim_year[events$index_start - 1]
-      mhw_rel_seas_start <- 0.5 * (A + B - C)
-      start_type <- ifelse(
-        events$index_start > 1,
-        "case1",
-        ifelse(
-          events$index_start == 1 &
-            difftime(events$date_peak, events$date_start, units = "days") > 0,
-          "case2",
-          "case3"
-        )
-      )[1]
-      rateOnset <- function(x, type) {
-        switch(
-          type,
-          case1 = (x$int_max - mhw_rel_seas_start) / (as.numeric(
-            difftime(x$date_peak, x$date_start, units = "days")
-          ) + 0.5),
-          case2 = (x$int_max - A) / 1,
-          case3 = (x$int_max - A) / as.numeric(difftime(x$date_peak, x$date_start, units = "days"))
-        )
+      if (length(B) + 1 == length(A)) {
+        B <- c(NA, B)
+        C <- c(NA, C)
       }
-      events$rate_onset <- rateOnset(events, start_type)
+      mhw_rel_seas_start <- 0.5 * (A + B - C)
+
+      events$rate_onset <- ifelse(
+        events$index_start > 1,
+        (events$int_max - mhw_rel_seas_start) / (as.numeric( ## RWS: The other part of the calculation
+          difftime(events$date_peak, events$date_start, units = "days")) + 0.5),
+        NA
+        )
 
       D <- mhw_rel_seas[events$index_stop]
       E <- t_series$temp[events$index_stop + 1]
       F <- t_series$seas_clim_year[events$index_stop + 1]
       mhw_rel_seas_end <- 0.5 * (D + E - F)
-      stop_type <- ifelse(
-        events$index_stop < nrow(t_series),
-        "case4",
-        ifelse(
-          events$index_stop == nrow(t_series) &
-            difftime(events$date_peak, t_series[nrow(t_series), "date"], units = "days") < 0,
-          "case5",
-          "case6"
-        )
-      )[nrow(events)]
 
-      rateDecline <- function(x, type) {
-        switch(
-          type,
-          case4 = (x$int_max - mhw_rel_seas_end) / (as.numeric(
-            difftime(x$date_stop, x$date_peak, units = "days")
-          ) + 0.5),
-          case5 = (x$int_max - mhw_rel_seas_end) / 1,
-          case6 = (x$int_max - mhw_rel_seas_end) / as.numeric(difftime(x$date_stop, x$date_peak, units = "days"))
-        )
-      }
-      events$rate_decline <- rateDecline(events, stop_type)
+      events$rate_decline <- ifelse(
+        events$index_stop < nrow(t_series),
+        (events$int_max - mhw_rel_seas_end) / (as.numeric(
+          difftime(events$date_stop, events$date_peak, units = "days")) + 0.5),
+        NA
+      )
 
       if (cold_spells) {
         events <- events %>% dplyr::mutate(
@@ -492,7 +482,9 @@ detect <-
           int_max_abs = -int_max_abs,
           int_cum_abs = -int_cum_abs,
           int_mean_norm = -int_mean_norm,
-          int_max_norm = -int_max_norm
+          int_max_norm = -int_max_norm,
+          rate_onset = -rate_onset,
+          rate_decline = -rate_decline
         )
         t_series <- t_series %>% dplyr::mutate(
           temp = -temp,
@@ -501,7 +493,7 @@ detect <-
         )
       }
 
-      list(clim = dplyr::group_by(t_series, event_no),
-           event = dplyr::group_by(events, event_no))
+      list(clim = dplyr::group_by(t_series),
+           event = dplyr::group_by(events))
     }
   }
