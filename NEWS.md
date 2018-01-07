@@ -3,6 +3,23 @@ output: pdf_document
 ---
 
 # VERSION CHANGES
+## Changes in version 0.16.0 (6 January 2018)
+* The make_whole(), detect() and exceedance() functions now handle any arbitrary
+column names, which are specified via arguments to the function.
+* Remove dependence on magrittr.
+* More consistent use of tidyverse packages throughout.
+* Updates to examples.
+* Miscellaneous other improvements troughout the function internals.
+
+## Changes in version 0.15.9 (19 June 2017)
+* Warnings given by exceedance() when exceedances begin/end on the first/last day of the
+  time series have been corrected --- it will now report an NA when the exceedance
+  occurs at the start/end of the time series.
+* Some plyr routines phased out in exceedance function in favour of a dplyr approach.
+  
+## Changes in version 0.15.8 (18 June 2017)
+* Further removed need for plyr functions --- use dplyr instead.
+
 ## Changes in version 0.15.7 (18 June 2017)
 * Warnings given by detect() when events begin/end on the first/last day of the
   time series have been corrected --- it will now report an NA when the event

@@ -12,7 +12,7 @@
 
 <meta name="author" content="AJ Smit" />
 
-<meta name="date" content="2017-06-18" />
+<meta name="date" content="2018-01-07" />
 
 <title>Extreme event detection in gridded data</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Extreme event detection in gridded data</h1>
 <h4 class="author"><em>AJ Smit</em></h4>
-<h4 class="date"><em>2017-06-18</em></h4>
+<h4 class="date"><em>2018-01-07</em></h4>
 
 
 
@@ -84,31 +84,31 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">nc &lt;-<span class="st"> </span><span class="kw">nc_open</span>(<span class="st">&quot;/Users/ajsmit/spatial/OISSTv2/daily/OISST-V2-AVHRR_agg.nc&quot;</span>)
 <span class="co"># print(nc)</span>
 sst &lt;-<span class="st"> </span><span class="kw">ncvar_get</span>(nc, <span class="dt">varid =</span> <span class="st">&quot;sst&quot;</span>) <span class="co"># reads in the only var in netCDF file</span>
-<span class="kw">dimnames</span>(sst) &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">lon =</span> nc$dim$lon$vals,
-                      <span class="dt">lat =</span> nc$dim$lat$vals, 
-                      <span class="dt">t =</span> nc$dim$time$vals)</code></pre></div>
+<span class="kw">dimnames</span>(sst) &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">lon =</span> nc<span class="op">$</span>dim<span class="op">$</span>lon<span class="op">$</span>vals,
+                      <span class="dt">lat =</span> nc<span class="op">$</span>dim<span class="op">$</span>lat<span class="op">$</span>vals, 
+                      <span class="dt">t =</span> nc<span class="op">$</span>dim<span class="op">$</span>time<span class="op">$</span>vals)</code></pre></div>
 <p>Now I take this array of SST data and convert it into a a data frame using <strong>reshape2</strong>’s <code>melt()</code> function. This creates columns named <strong>lon</strong>, <strong>lat</strong> and <strong>t</strong> (the latter is the time vector, with the mandatory name <strong>t</strong>, which is required by <strong>RmarineHeatWave</strong>’s <code>make_whole()</code> and <code>detect()</code> functions). Now each SST value is indexed by a unique combination of <strong>lon</strong>, <strong>lat</strong> and <strong>t</strong>. Notice too how I use the <strong>tibble</strong> package’s <code>as_tibble()</code> function together with <code>melt()</code>, because I like the way that it neatly creates a very readbale data frame.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sst &lt;-<span class="st"> </span><span class="kw">as_tibble</span>(<span class="kw">melt</span>(sst, <span class="dt">value.name =</span> <span class="st">&quot;temp&quot;</span>))
-sst$t &lt;-<span class="st"> </span><span class="kw">as.Date</span>(sst$t, <span class="dt">origin =</span> <span class="st">'1978-01-01'</span>)</code></pre></div>
+sst<span class="op">$</span>t &lt;-<span class="st"> </span><span class="kw">as.Date</span>(sst<span class="op">$</span>t, <span class="dt">origin =</span> <span class="st">'1978-01-01'</span>)</code></pre></div>
 <p>Since the data frame of SSTs contains some NAs where seawater temperatures are not available due to the presence of land, I remove all cases with NAs.</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sst1 &lt;-<span class="st"> </span>sst %&gt;%
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">sst1 &lt;-<span class="st"> </span>sst <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">na.omit</span>()
 <span class="kw">rm</span>(sst); <span class="kw">rm</span>(nc)</code></pre></div>
 </div>
 <div id="event-detection" class="section level2">
 <h2>Event detection</h2>
 <p>Now I make a wrapper function to combine <code>make_whole()</code> and <code>detect()</code>. This increases the ease of use of this function with <strong>plyr</strong>’s <code>ddply()</code> function, but most importantly, it pulls out only the <strong>event</strong> portion of the list of results (i.e. ignoring <strong>clim</strong>).</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">OISST_detect &lt;-<span class="st"> </span>function(dat) {
-  dat &lt;-<span class="st"> </span>dat[,<span class="dv">3</span>:<span class="dv">4</span>]
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">OISST_detect &lt;-<span class="st"> </span><span class="cf">function</span>(dat) {
+  dat &lt;-<span class="st"> </span>dat[,<span class="dv">3</span><span class="op">:</span><span class="dv">4</span>]
   start =<span class="st"> &quot;1983-01-01&quot;</span>
   end =<span class="st"> &quot;2012-12-31&quot;</span>
   whole &lt;-<span class="st"> </span><span class="kw">make_whole</span>(dat)
   mhw &lt;-<span class="st"> </span><span class="kw">detect</span>(whole, <span class="dt">climatology_start =</span> start, <span class="dt">climatology_end =</span> end,
                 <span class="dt">min_duration =</span> <span class="dv">5</span>, <span class="dt">max_gap =</span> <span class="dv">2</span>, <span class="dt">cold_spells =</span> <span class="ot">FALSE</span>)
-  events &lt;-<span class="st"> </span>mhw$event
+  events &lt;-<span class="st"> </span>mhw<span class="op">$</span>event
   <span class="kw">return</span>(events)
   }</code></pre></div>
-<p>And now I apply the <code>OISST_detect()</code> function to the SST data and save the results as a .Rdata file.</p>
+<p>And now I apply the <code>OISST_detect()</code> function to the SST data and save the results as an intermediate .Rdata file.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># it takes a long time...</span>
 <span class="kw">system.time</span>(OISST_events &lt;-<span class="st"> </span><span class="kw">ddply</span>(sst1, .(lon, lat), OISST_detect, <span class="dt">.parallel =</span> <span class="ot">TRUE</span>))
  <span class="co">#   user  system elapsed </span>
@@ -121,70 +121,70 @@ sst$t &lt;-<span class="st"> </span><span class="kw">as.Date</span>(sst$t, <span
 <div id="trend-detection" class="section level2">
 <h2>Trend detection</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># summarise the number of unique longitude, latitude and year combination:</span>
-event_freq &lt;-<span class="st"> </span>OISST_events %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">year =</span> <span class="kw">year</span>(date_start)) %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">group_by</span>(lon, lat, year) %&gt;%<span class="st"> </span>
+event_freq &lt;-<span class="st"> </span>OISST_events <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">year =</span> <span class="kw">year</span>(date_start)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(lon, lat, year) <span class="op">%&gt;%</span><span class="st"> </span>
 <span class="st">  </span><span class="kw">summarise</span>(<span class="dt">n =</span> <span class="kw">n</span>())
 <span class="kw">head</span>(event_freq)
 
 <span class="co"># create complete grid for merging with:</span>
-sst.grid &lt;-<span class="st"> </span>sst1 %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">select</span>(lon, lat, t) %&gt;%<span class="st"> </span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">t =</span> lubridate::<span class="kw">year</span>(t)) %&gt;%<span class="st"> </span>
+sst.grid &lt;-<span class="st"> </span>sst1 <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">select</span>(lon, lat, t) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">t =</span> lubridate<span class="op">::</span><span class="kw">year</span>(t)) <span class="op">%&gt;%</span><span class="st"> </span>
 <span class="st">  </span><span class="kw">unique</span>() <span class="co"># slow...</span>
-<span class="kw">colnames</span>(sst.grid)[<span class="kw">colnames</span>(sst.grid) ==<span class="st"> 't'</span>] &lt;-<span class="st"> 'year'</span>
+<span class="kw">colnames</span>(sst.grid)[<span class="kw">colnames</span>(sst.grid) <span class="op">==</span><span class="st"> 't'</span>] &lt;-<span class="st"> 'year'</span>
 
 <span class="co"># and merge:</span>
 OISST_n &lt;-<span class="st"> </span><span class="kw">left_join</span>(sst.grid, event_freq)
 OISST_n[<span class="kw">is.na</span>(OISST_n)] &lt;-<span class="st"> </span><span class="dv">0</span></code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lin_fun &lt;-<span class="st"> </span>function(ev) {
-  mod1 &lt;-<span class="st"> </span><span class="kw">glm</span>(n ~<span class="st"> </span>year, <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> ev)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">lin_fun &lt;-<span class="st"> </span><span class="cf">function</span>(ev) {
+  mod1 &lt;-<span class="st"> </span><span class="kw">glm</span>(n <span class="op">~</span><span class="st"> </span>year, <span class="dt">family =</span> <span class="kw">poisson</span>(<span class="dt">link =</span> <span class="st">&quot;log&quot;</span>), <span class="dt">data =</span> ev)
   <span class="co"># mod1 &lt;- lm(n ~ year, data = ev)</span>
-  tr &lt;-<span class="st"> </span><span class="kw">summary</span>(mod1)$coefficients[<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">4</span>)] <span class="co"># extract slope coefficient and its p-value</span>
+  tr &lt;-<span class="st"> </span><span class="kw">summary</span>(mod1)<span class="op">$</span>coefficients[<span class="dv">2</span>,<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">4</span>)] <span class="co"># extract slope coefficient and its p-value</span>
   <span class="kw">return</span>(tr)
 }</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">OISST_nTrend &lt;-<span class="st"> </span><span class="kw">ddply</span>(OISST_n, .(lon, lat), lin_fun)
-OISST_nTrend$pval &lt;-<span class="st"> </span><span class="kw">cut</span>(OISST_nTrend[,<span class="dv">4</span>], <span class="dt">breaks =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="dv">1</span>))
+OISST_nTrend<span class="op">$</span>pval &lt;-<span class="st"> </span><span class="kw">cut</span>(OISST_nTrend[,<span class="dv">4</span>], <span class="dt">breaks =</span> <span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>, <span class="fl">0.05</span>, <span class="dv">1</span>))
 <span class="kw">head</span>(OISST_nTrend)</code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## Coastline of African continent and some borders:
 <span class="kw">load</span>(<span class="st">&quot;/Users/ajsmit/Dropbox/repos/Trend_Analysis/graph/africa_coast.RData&quot;</span>)
 <span class="kw">load</span>(<span class="st">&quot;/Users/ajsmit/Dropbox/repos/Trend_Analysis/graph/africa_borders.Rdata&quot;</span>)
 <span class="kw">load</span>(<span class="st">&quot;/Users/ajsmit/Dropbox/repos/Trend_Analysis/graph/south_africa_coast.RData&quot;</span>)
 <span class="kw">load</span>(<span class="st">&quot;/Users/ajsmit/Dropbox/repos/Trend_Analysis/graph/sa_provinces_new.RData&quot;</span>)</code></pre></div>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggplot</span>(OISST_nTrend, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat)) +
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggplot</span>(OISST_nTrend, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat)) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_rect</span>(<span class="dt">size =</span> <span class="fl">0.2</span>, <span class="dt">fill =</span> <span class="ot">NA</span>,
-       <span class="kw">aes</span>(<span class="dt">xmin =</span> lon -<span class="st"> </span><span class="fl">0.1</span>, <span class="dt">xmax =</span> lon +<span class="st"> </span><span class="fl">0.1</span>, <span class="dt">ymin =</span> lat -<span class="st"> </span><span class="fl">0.1</span>, <span class="dt">ymax =</span> lat +<span class="st"> </span><span class="fl">0.1</span>,
-           <span class="dt">colour =</span> OISST_nTrend[,<span class="dv">5</span>])) +
-<span class="st">  </span><span class="kw">geom_raster</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> Estimate), <span class="dt">interpolate =</span> <span class="ot">FALSE</span>, <span class="dt">alpha =</span> <span class="fl">0.9</span>) +
+       <span class="kw">aes</span>(<span class="dt">xmin =</span> lon <span class="op">-</span><span class="st"> </span><span class="fl">0.1</span>, <span class="dt">xmax =</span> lon <span class="op">+</span><span class="st"> </span><span class="fl">0.1</span>, <span class="dt">ymin =</span> lat <span class="op">-</span><span class="st"> </span><span class="fl">0.1</span>, <span class="dt">ymax =</span> lat <span class="op">+</span><span class="st"> </span><span class="fl">0.1</span>,
+           <span class="dt">colour =</span> OISST_nTrend[,<span class="dv">5</span>])) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_raster</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> Estimate), <span class="dt">interpolate =</span> <span class="ot">FALSE</span>, <span class="dt">alpha =</span> <span class="fl">0.9</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">scale_fill_gradient2</span>(<span class="dt">name =</span> <span class="st">&quot;Count</span><span class="ch">\n</span><span class="st"> per</span><span class="ch">\n</span><span class="st"> year&quot;</span>, <span class="dt">high =</span> <span class="st">&quot;red&quot;</span>, <span class="dt">mid =</span> <span class="st">&quot;white&quot;</span>,
-                       <span class="dt">low =</span> <span class="st">&quot;darkblue&quot;</span>, <span class="dt">midpoint =</span> <span class="dv">0</span>) +
+                       <span class="dt">low =</span> <span class="st">&quot;darkblue&quot;</span>, <span class="dt">midpoint =</span> <span class="dv">0</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">scale_colour_manual</span>(<span class="dt">breaks =</span> <span class="kw">c</span>(<span class="st">&quot;(0,0.001]&quot;</span>, <span class="st">&quot;(0.001,0.01]&quot;</span>, <span class="st">&quot;(0.01,0.05]&quot;</span>, <span class="st">&quot;(0.05,1]&quot;</span>),
                       <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;firebrick1&quot;</span>, <span class="st">&quot;firebrick2&quot;</span>, <span class="st">&quot;firebrick3&quot;</span>, <span class="st">&quot;white&quot;</span>),
-                      <span class="dt">name =</span> <span class="st">&quot;p-value&quot;</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) +
+                      <span class="dt">name =</span> <span class="st">&quot;p-value&quot;</span>, <span class="dt">guide =</span> <span class="ot">FALSE</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_polygon</span>(<span class="dt">data =</span> south_africa_coast, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group), 
-               <span class="dt">colour =</span> <span class="ot">NA</span>, <span class="dt">fill =</span> <span class="st">&quot;grey80&quot;</span>) +
+               <span class="dt">colour =</span> <span class="ot">NA</span>, <span class="dt">fill =</span> <span class="st">&quot;grey80&quot;</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_path</span>(<span class="dt">data =</span> africa_borders, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group), 
-            <span class="dt">size =</span> <span class="fl">0.3</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>) +
+            <span class="dt">size =</span> <span class="fl">0.3</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_polygon</span>(<span class="dt">data =</span> south_africa_coast, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group),
-               <span class="dt">size =</span> <span class="fl">0.5</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>) +
-<span class="st">  </span><span class="kw">coord_fixed</span>(<span class="dt">ratio =</span> <span class="dv">1</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="fl">12.12</span>, <span class="fl">35.12</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(-<span class="fl">26.88</span>, -<span class="fl">37.38</span>), <span class="dt">expand =</span> <span class="ot">TRUE</span>) +
+               <span class="dt">size =</span> <span class="fl">0.5</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_fixed</span>(<span class="dt">ratio =</span> <span class="dv">1</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="fl">12.12</span>, <span class="fl">35.12</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">26.88</span>, <span class="op">-</span><span class="fl">37.38</span>), <span class="dt">expand =</span> <span class="ot">TRUE</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">theme_bw</span>()
 <span class="kw">ggsave</span>(<span class="dt">file =</span> <span class="st">&quot;README-grid-example1.png&quot;</span>, <span class="dt">width =</span> <span class="dv">6</span>, <span class="dt">height =</span> <span class="fl">3.2</span>)
 
-<span class="kw">ggplot</span>(OISST_nTrend, <span class="kw">aes</span>(lon, lat)) +
-<span class="st">  </span><span class="kw">geom_raster</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> pval), <span class="dt">interpolate =</span> <span class="ot">FALSE</span>) +
+<span class="kw">ggplot</span>(OISST_nTrend, <span class="kw">aes</span>(lon, lat)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_raster</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> pval), <span class="dt">interpolate =</span> <span class="ot">FALSE</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">breaks =</span> <span class="kw">c</span>(<span class="st">&quot;(0,0.001]&quot;</span>, <span class="st">&quot;(0.001,0.01]&quot;</span>, <span class="st">&quot;(0.01,0.05]&quot;</span>,
                                <span class="st">&quot;(0.05,0.1]&quot;</span>, <span class="st">&quot;(0.1,0.5]&quot;</span>, <span class="st">&quot;(0.5,1]&quot;</span>),
                     <span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;black&quot;</span>, <span class="st">&quot;grey20&quot;</span>, <span class="st">&quot;grey40&quot;</span>,
                                <span class="st">&quot;grey80&quot;</span>, <span class="st">&quot;grey90&quot;</span>, <span class="st">&quot;white&quot;</span>),
-                    <span class="dt">name =</span> <span class="st">&quot;p-value&quot;</span>) +
+                    <span class="dt">name =</span> <span class="st">&quot;p-value&quot;</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_polygon</span>(<span class="dt">data =</span> south_africa_coast, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group), 
-               <span class="dt">colour =</span> <span class="ot">NA</span>, <span class="dt">fill =</span> <span class="st">&quot;grey80&quot;</span>) +
+               <span class="dt">colour =</span> <span class="ot">NA</span>, <span class="dt">fill =</span> <span class="st">&quot;grey80&quot;</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_path</span>(<span class="dt">data =</span> africa_borders, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group), 
-            <span class="dt">size =</span> <span class="fl">0.3</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>) +
+            <span class="dt">size =</span> <span class="fl">0.3</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_polygon</span>(<span class="dt">data =</span> south_africa_coast, <span class="kw">aes</span>(<span class="dt">x =</span> lon, <span class="dt">y =</span> lat, <span class="dt">group =</span> group), 
-               <span class="dt">size =</span> <span class="fl">0.5</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>) +
-<span class="st">  </span><span class="kw">coord_fixed</span>(<span class="dt">ratio =</span> <span class="dv">1</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="fl">12.12</span>, <span class="fl">35.12</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(-<span class="fl">26.88</span>, -<span class="fl">37.38</span>), <span class="dt">expand =</span> <span class="ot">TRUE</span>) +
+               <span class="dt">size =</span> <span class="fl">0.5</span>, <span class="dt">colour =</span> <span class="st">&quot;black&quot;</span>, <span class="dt">fill =</span> <span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_fixed</span>(<span class="dt">ratio =</span> <span class="dv">1</span>, <span class="dt">xlim =</span> <span class="kw">c</span>(<span class="fl">12.12</span>, <span class="fl">35.12</span>), <span class="dt">ylim =</span> <span class="kw">c</span>(<span class="op">-</span><span class="fl">26.88</span>, <span class="op">-</span><span class="fl">37.38</span>), <span class="dt">expand =</span> <span class="ot">TRUE</span>) <span class="op">+</span>
 <span class="st">  </span><span class="kw">theme_bw</span>()
 <span class="kw">ggsave</span>(<span class="dt">file =</span> <span class="st">&quot;README-grid-example2.png&quot;</span>, <span class="dt">width =</span> <span class="dv">6</span>, <span class="dt">height =</span> <span class="fl">3.2</span>)</code></pre></div>
 <!-- ```{r, echo = FALSE, include = TRUE, out.width = "580px", fig.cap = "**Figure 1.** Plot of marine heat waves detected in the 0.25 degree Reynold's OISST around South Africa, showing the increase in frequency of marine heat waves within the Agulhas Current. Outlined pixels indicate that the trend is significant at p < 0.05."} -->
