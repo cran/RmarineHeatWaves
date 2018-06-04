@@ -1,12 +1,27 @@
----
-output: pdf_document
----
-
 # VERSION CHANGES
+
+## Changes in version 0.17.0 (4 June 2018)
+* Add start-up message.
+* Minor bug fixes.
+* Reached end of active development cycle.
+
+## Changes in version 0.16.4 (28 April 2018)
+* Remove restriction to require full years for start/end points of
+  climatology calculations in detect().
+* Documentation updated accordingly.
+* Fix error with smooth_percentile and smooth_percentile_width descriptions
+  that were interchanged.
+
+## Changes in version 0.16.3 (18 April 2018)
+* Bug fix to the block_event() function.
+
+## Changes in version 0.16.2 (3 March 2018)
+* Bug fix to the event_line() function.
+
 ## Changes in version 0.16.1 (28 February 2018)
-* Fix event_line(), which broke in v.0.16.0 due to an edit there to enable using 
-  arbitrary column headers for the date and temperature columns (previously the 
-  defaults were 't' and 'temp').
+* Repaired event_line(), which broke in v.0.16.0 due to an edit there
+  to enable using arbitrary column headers for the date and temperature columns
+  (previously the defaults were 't' and 'temp').
 
 ## Changes in version 0.16.0.9000 (18 January 2018)
 * detect() now reurns a list with two tibbles, rather than data.frames as before.

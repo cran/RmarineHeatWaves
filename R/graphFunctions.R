@@ -7,6 +7,7 @@
 #' scale_fill_manual scale_x_date xlab ylab theme theme_grey element_text
 #' element_blank element_rect element_line
 #' @importFrom grid unit
+#' @importFrom plyr .
 #'
 #' @param data The function receives the output from the \code{\link{detect}} function.
 #' @param x This column is expected to contain a vector of dates as per the
@@ -44,10 +45,8 @@
 #' brighter colour. This function differs in use from \code{\link{geom_flame}}
 #' in that it creates a stand alone figure. The benefit of this being
 #' that one must not have any prior knowledge of ggplot2 to create the figure.
-#' Currently the figure labels will be appropriate for thermal events only, but this
-#' may be generalised to other kinds of extremes in the future.
 #'
-#' @author Robert W. Schlegel, Albertus J. Smit
+#' @author Robert W. Schlegel
 #'
 #' @references Hobday, A.J. et al. (2016), A hierarchical approach to defining
 #' marine heatwaves, Progress in Oceanography, 141, pp. 227-238,
@@ -57,7 +56,8 @@
 #'
 #' @examples
 #' ts_dat <- make_whole(sst_WA)
-#' res <- detect(ts_dat, climatology_start = 1983, climatology_end = 2012) # using default values
+#' res <- detect(ts_dat, climatology_start = "1983-01-01",
+#'               climatology_end = "2012-12-31")
 #'
 #' \dontrun{
 #' event_line(res, spread = 200, metric = "int_cum",
@@ -69,11 +69,9 @@ event_line <- function(data,
                        min_duration = 5,
                        spread = 150,
                        metric = "int_cum",
-                       start_date = "1999-06-30",
-                       end_date = "2000-05-30") {
-
-  temp <- date_stop <- date_start <- int_max <- int_mean <- int_cum <- duration <- NULL
-  . <- "Shut up" # sorts out an annoying note produced during 'Check'
+                       start_date,
+                       end_date) {
+  date_stop <- date_start <- int_max <- int_mean <- int_cum <- duration <- NULL
 
   event <- data$event %>%
     dplyr::filter(date_stop >= start_date & date_start <= end_date)
@@ -87,12 +85,13 @@ event_line <- function(data,
   quo_y <- rlang::enquo(y)
 
   clim <- data$clim %>%
-    dplyr::rename(t = !! quo_x,
-                  temp = !! quo_y) %>%
+    dplyr::rename(t = !!quo_x,
+                  temp = !!quo_y) %>%
     dplyr::filter(t %in% date_spread)
 
-  event_no <- thresh_clim_year <- seas_clim_year <- NULL
+  temp <- event_no <- thresh_clim_year <- seas_clim_year <- NULL
 
+  plot.df <- data.frame()
   for (i in min(clim$event_no, na.rm = TRUE):max(clim$event_no, na.rm = TRUE)) {
     x <- clim[stats::complete.cases(clim$event_no) & clim$event_no == i,]
     grid.df <-
@@ -104,12 +103,12 @@ event_line <- function(data,
       ind1 <- rep(seq_along(ex1$lengths), ex1$lengths)
       s1 <- split(zoo::index(x$thresh_criterion), ind1)
       proto_events <- s1[ex1$values == TRUE]
-      index_stop <- index_start <- NULL ###
+      index_stop <- index_start <- NULL
       proto_events_rng <-
         lapply(proto_events, function(x)
           data.frame(index_start = min(x), index_stop = max(x)))
-      duration <- NULL ###
-      # min_duration <- NULL ###
+      duration <- NULL
+      # min_duration <- NULL
       protoFunc <- function(proto_data) {
         out <- proto_data %>%
           dplyr::mutate(duration = index_stop - index_start + 1) %>%
@@ -131,7 +130,6 @@ event_line <- function(data,
       event_no_sub <- NULL
       x$event_no_sub <- x$event_no
     }
-
     mirror <- function(x) {
       event_no_sub <- NULL
       y <- data.frame(
@@ -152,6 +150,7 @@ event_line <- function(data,
     }
     z <- plyr::ddply(x, .(event_no_sub), mirror)
     z$event_no_sub <- as.character(z$event_no_sub)
+    plot.df <- rbind(plot.df, z)
   }
 
   lineCol <- c(
@@ -174,9 +173,9 @@ event_line <- function(data,
   if (!exists("ylabel")) ylabel <- metric
 
   ggplot(data = clim, aes(x = t, y = temp)) +
-    geom_polygon(data = z,
+    geom_polygon(data = plot.df,
                  aes(x = t, y = temp, group = event_no_sub, fill = "events"), size = 0.5) +
-    geom_polygon(data = z[z$event_no == event_top$event_no[1],],
+    geom_polygon(data = plot.df[plot.df$event_no == event_top$event_no[1],],
                  aes(x = t, y = temp, group = event_no_sub, fill = "peak event"),
                  size = 0.5) +
     geom_line(aes(y = seas_clim_year, col = "climatology"),
@@ -205,7 +204,6 @@ event_line <- function(data,
     )
 }
 
-
 #' Create a Timeline of Selected Event Metrics.
 #'
 #' Visualise a timeline of several event metrics as 'lollipop' graphs.
@@ -233,7 +231,8 @@ event_line <- function(data,
 #'
 #' @examples
 #' ts_dat <- make_whole(sst_NW_Atl)
-#' res <- detect(ts_dat, climatology_start = 1983, climatology_end = 2012) # using default values
+#' res <- detect(ts_dat, climatology_start = "1983-01-01",
+#'               climatology_end = "2012-12-31")
 #'
 #' \dontrun{
 #' lolli_plot(res, metric = "int_cum", event_count = 3, xaxis = "date_peak")

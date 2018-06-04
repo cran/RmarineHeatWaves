@@ -4,10 +4,18 @@
 \alias{block_average}
 \title{Calculate Yearly Means for Event Metrics.}
 \usage{
-block_average(data, report = "full")
+block_average(data, x = t, y = temp, report = "full")
 }
 \arguments{
 \item{data}{Accepts the data returned by the \code{\link{detect}} function.}
+
+\item{x}{This column is expected to contain a vector of dates as per the
+specification of \code{make_whole}. If a column headed \code{t} is present in
+the dataframe, this argument may be ommitted; otherwise, specify the name of
+the column with dates here.}
+
+\item{y}{This is a column containing the measurement variable. If the column
+name differs from the default (i.e. \code{temp}), specify the name here.}
 
 \item{report}{Specify either \code{full} or \code{partial}. Selecting \code{full} causes
 the report to contain NAs for any years in which no events were detected
@@ -66,8 +74,9 @@ event metrics in 'blocks' of one year, while the python version allows
 arbitrary (integer) block sizes.
 }
 \examples{
-# t_dat <- make_whole(sst_Med)
-# res <- detect(t_dat, climatology_start = 1983, climatology_end = 2012) # using default values
+# ts_dat <- make_whole(sst_Med)
+# res <- detect(ts_dat, climatology_start = "1983-01-01",
+#               climatology_end = "2012-12-31")
 # out <- block_average(res)
 # summary(glm(count ~ year, out, family = "poisson"))
 

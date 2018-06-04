@@ -3,7 +3,10 @@ RmarineHeatWaves
 
 [![CRAN\_Status\_Badge](http://www.r-pkg.org/badges/version/RmarineHeatWaves)](https://cran.r-project.org/package=RmarineHeatWaves) [![Travis-CI Build Status](https://travis-ci.org/ajsmit/RmarineHeatWaves.svg?branch=master)](https://travis-ci.org/ajsmit/RmarineHeatWaves) ![](https://cranlogs.r-pkg.org/badges/grand-total/RmarineHeatWaves)
 
-The **RmarineHeatWaves** package is a translation of the original Python code written by Eric C. J. Oliver that can be found on [GitHub](https://github.com/ecjoliver/marineHeatWaves).
+The **RmarineHeatWaves** package is a translation of the original Python code written 
+by Eric C. J. Oliver that can be found on [GitHub](https://github.com/ecjoliver/marineHeatWaves). 
+
+This package is actively maintained, but on 2018-04-24 it was forked to a new package called [**heatwaveR**](https://robwschlegel.github.io/heatwaveR/index.html), which will supercede and eventually replace **RmarineHeatWaves** in the near future. For continuity, we are ensuring that the functionality in **heatwaveR** will be exactly the same in **RmarineHeatWaves**, and for a while the two packages will be maintained in sync, at least as far as developments around the existing code-base are concerned. New functions will only be added to **heatwaveR**.
 
 The **RmarineHeatWaves** R package contains a number of functions which calculate and display marine heat waves according to the definition of Hobday et al. (2016). The marine cold spell option was implemented in version 0.13 (21 Nov 2015) of the Python module as a result of the preparation of Schlegel et al. (2017), wherein the cold events are introduced and briefly discussed.
 
@@ -68,32 +71,78 @@ The heat wave metrics
 
 The function will return a list of two tibbles (see the ‘tidyverse’), `clim` and `event`, which are the climatology and MHW (or MCS) events, respectively. The climatology contains the full time series of daily temperatures, as well as the the seasonal climatology, the threshold and various aspects of the events that were detected. The software was designed for detecting extreme thermal events, and the units specified below reflect that intended purpose. However, the various other kinds of extreme events may be detected according to the ‘marine heat wave’ specifications, and if that is the case, the appropriate units need to be determined by the user.
 
--   `doy`—Julian day (day-of-year). For non-leap years it runs 1…59 and 61…366, while leap years run 1…366. This column will be named differently if another name was specified to the `doy` argument.
--   `t`—The date of the temperature measurement. This column will be named differently if another name was specified to the `x` argument.
--   `temp`—If the software was used for the purpose for which it was designed, seawater temperature \[deg. C\] on the specified date will be returned. This column will of course be named differently if another kind of measurement was specified to the `y` argument.
--   `seas_clim_year`—Climatological seasonal cycle \[deg. C\].
--   `thresh_clim_year`—Seasonally varying threshold (e.g., 90th percentile) \[deg. C\].
--   `var_clim_year`—Seasonally varying variance (standard deviation) \[deg. C\].
--   `thresh_criterion`—Boolean indicating if `temp` exceeds `thresh_clim_year`.
--   `duration_criterion`—Boolean indicating whether periods of consecutive `thresh_criterion` are &gt;= `min_duration`.
--   `event`—Boolean indicating if all criteria that define a MHW or MCS are met.
--   `event_no`—A sequential number indicating the ID and order of occurence of the MHWs or MCSs.
+<table style="width:49%;">
+<colgroup>
+<col width="29%" />
+<col width="19%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Climatology metric</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>doy</code></td>
+<td>Julian day (day-of-year). For non-leap years it runs 1…59 and 61…366, while leap years run 1…366. This column will be named differently if another name was specified to the <code>doy</code> argument.</td>
+</tr>
+<tr class="even">
+<td><code>t</code></td>
+<td>The date of the temperature measurement. This column will be named differently if another name was specified to the <code>x</code> argument.</td>
+</tr>
+<tr class="odd">
+<td><code>temp</code></td>
+<td>If the software was used for the purpose for which it was designed, seawater temperature [deg. C] on the specified date will be returned. This column will of course be named differently if another kind of measurement was specified to the <code>y</code> argument.</td>
+</tr>
+<tr class="even">
+<td><code>seas_clim_year</code></td>
+<td>Climatological seasonal cycle [deg. C].</td>
+</tr>
+<tr class="odd">
+<td><code>thresh_clim_year</code></td>
+<td>Seasonally varying threshold (e.g., 90th percentile) [deg. C].</td>
+</tr>
+<tr class="even">
+<td><code>var_clim_year</code></td>
+<td>Seasonally varying variance (standard deviation) [deg. C].</td>
+</tr>
+<tr class="odd">
+<td><code>thresh_criterion</code></td>
+<td>Boolean indicating if <code>temp</code> exceeds <code>thresh_clim_year</code>.</td>
+</tr>
+<tr class="even">
+<td><code>duration_criterion</code></td>
+<td>Boolean indicating whether periods of consecutive <code>thresh_criterion</code> are &gt;= <code>min_duration</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>event</code></td>
+<td>Boolean indicating if all criteria that define a MHW or MCS are met.</td>
+</tr>
+<tr class="even">
+<td><code>event_no</code></td>
+<td>A sequential number indicating the ID and order of occurence of the MHWs or MCSs.</td>
+</tr>
+</tbody>
+</table>
 
 The events are summarised using a range of event metrics:
 
--   `index_start`—Start index of event.
--   `index_stop`—Stop index of event.
--   `event_no`—A sequential number indicating the ID and order of the events.
--   `duration`—Duration of event \[days\].
--   `date_start`—Start date of event \[date\].
--   `date_stop`—Stop date of event \[date\].
--   `date_peak`—Date of event peak \[date\].
--   `int_mean`—Mean intensity \[deg. C\].
--   `int_max`—Maximum (peak) intensity \[deg. C\].
--   `int_var`—Intensity variability (standard deviation) \[deg. C\].
--   `int_cum`—Cumulative intensity \[deg. C x days\].
--   `rate_onset`—Onset rate of event \[deg. C / day\].
--   `rate_decline`—Decline rate of event \[deg. C / day\].
+| Event metric   | Description                                                    |
+|----------------|----------------------------------------------------------------|
+| `index_start`  | Start index of event.                                          |
+| `index_stop`   | Stop index of event.                                           |
+| `event_no`     | A sequential number indicating the ID and order of the events. |
+| `duration`     | Duration of event \[days\].                                    |
+| `date_start`   | Start date of event \[date\].                                  |
+| `date_stop`    | Stop date of event \[date\].                                   |
+| `date_peak`    | Date of event peak \[date\].                                   |
+| `int_mean`     | Mean intensity \[deg. C\].                                     |
+| `int_max`      | Maximum (peak) intensity \[deg. C\].                           |
+| `int_var`      | Intensity variability (standard deviation) \[deg. C\].         |
+| `int_cum`      | Cumulative intensity \[deg. C x days\].                        |
+| `rate_onset`   | Onset rate of event \[deg. C / day\].                          |
+| `rate_decline` | Decline rate of event \[deg. C / day\].                        |
 
 `int_max_rel_thresh`, `int_mean_rel_thresh`, `int_var_rel_thresh`, and `int_cum_rel_thresh` are as above except relative to the threshold (e.g., 90th percentile) rather than the seasonal climatology.
 
@@ -111,7 +160,8 @@ The `detect()` function is the package’s core function. Here is the `detect()`
 ``` r
 library(RmarineHeatWaves); library(plyr); library(dplyr); library(ggplot2)
 ts <- make_whole(sst_WA)
-mhw <- detect(ts, climatology_start = 1983, climatology_end = 2012)
+mhw <- detect(ts, climatology_start = "1983-01-01",
+              climatology_end = "2012-12-31")
 mhw$event %>% 
   dplyr::ungroup() %>%
   dplyr::select(event_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
@@ -120,11 +170,11 @@ mhw$event %>%
 #> # A tibble: 5 x 7
 #>   event_no duration date_start date_peak  int_mean int_max int_cum
 #>      <int>    <dbl> <date>     <date>        <dbl>   <dbl>   <dbl>
-#> 1       22     95.0 1999-05-13 1999-05-22     2.50    3.60   237  
-#> 2       42     60.0 2011-02-06 2011-02-28     3.21    6.51   193  
-#> 3       49     47.0 2012-01-11 2012-01-27     2.23    3.30   105  
-#> 4       50     46.0 2012-03-01 2012-04-10     1.99    2.96    91.7
-#> 5       41     40.0 2010-12-24 2011-01-28     2.16    3.27    86.3
+#> 1       22      95. 1999-05-13 1999-05-22     2.50    3.60   237. 
+#> 2       42      60. 2011-02-06 2011-02-28     3.21    6.51   193. 
+#> 3       49      47. 2012-01-11 2012-01-27     2.23    3.30   105. 
+#> 4       50      46. 2012-03-01 2012-04-10     1.99    2.96    91.7
+#> 5       41      40. 2010-12-24 2011-01-28     2.16    3.27    86.3
 ```
 
 The corresponding `event_line()` and `lolli_plot()`, which represent the massive Western Australian heatwave of 2011, look like this:
@@ -194,7 +244,8 @@ ggplot(mhw$event, aes(x = date_start, y = int_cum)) +
 The calculation and visualisation of marine cold spells is also accommodated within this package. Here is a cold spell detected in the OISST data for Western Australia:
 
 ``` r
-mcs <- detect(ts, climatology_start = 1983, climatology_end = 2012, cold_spells = TRUE)
+mcs <- detect(ts, climatology_start = "1983-01-01", climatology_end = "2012-12-31",
+              cold_spells = TRUE)
 mcs$event %>% 
   dplyr::ungroup() %>%
   dplyr::select(event_no, duration, date_start, date_peak, int_mean, int_max, int_cum) %>% 
@@ -203,11 +254,11 @@ mcs$event %>%
 #> # A tibble: 5 x 7
 #>   event_no duration date_start date_peak  int_mean int_max int_cum
 #>      <int>    <dbl> <date>     <date>        <dbl>   <dbl>   <dbl>
-#> 1       16     76.0 1990-04-13 1990-05-11    -2.54   -3.22  -193  
-#> 2       54     58.0 2003-12-19 2004-01-23    -1.80   -2.66  -104  
-#> 3       71     52.0 2014-04-14 2014-05-05    -1.82   -2.57  - 94.6
-#> 4        8     38.0 1986-06-24 1986-07-17    -2.01   -2.95  - 76.4
-#> 5       51     32.0 2003-09-08 2003-09-16    -1.56   -2.12  - 49.9
+#> 1       16      76. 1990-04-13 1990-05-11    -2.54   -3.22  -193. 
+#> 2       54      58. 2003-12-19 2004-01-23    -1.80   -2.66  -104. 
+#> 3       71      52. 2014-04-14 2014-05-05    -1.82   -2.57   -94.6
+#> 4        8      38. 1986-06-24 1986-07-17    -2.01   -2.95   -76.4
+#> 5       51      32. 2003-09-08 2003-09-16    -1.56   -2.12   -49.9
 ```
 
 The plots showing the marine cold spells look like this:
